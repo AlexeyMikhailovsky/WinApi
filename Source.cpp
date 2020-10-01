@@ -2,18 +2,22 @@
 #include <winuser.h>
 #include <wingdi.h>
 
+
 boolean isDown,vkShift;
 POINT p;
+RECT clientRect;
 struct
 {
 	int x, y;
 	int z, w;
-} pos = { 0};
+} pos = { 0 };
+
 int vSpeedx = 0;
 int vSpeedy = 0;
 int vSpeedz = 0;
 int vSpeedw = 0;
 int maxSpeed = 50;
+int i;
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -21,59 +25,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CREATE:
 	{
-	//	PAINTSTRUCT ps;
-		//HDC hdc = BeginPaint(hwnd, &ps);
-		//GetClientRect(hwnd,);
-     	//RECT rect;
-	//	rect.left = 0;
-		//rect.right = ;
-	//	rect.top = 0;
-	//	rect.bottom = 10000;
-		//FillRect(hdc, &rect, reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));
-		//HPEN newPen = CreatePen(PS_SOLID, 5, RGB(0,0,255));
-	//	HGDIOBJ oldPen = SelectObject(hdc, newPen);
-	//	Rectangle(hdc, 0,100,0,100);
-	//	SelectObject(hdc, oldPen);
-	//	DeleteObject(newPen);
-	//	EndPaint(hwnd, &ps);
-		//BOOL Rectangle(HDC hdc,int left,int top,int right,int bottom);
-		//hBitmap = (HBITMAP)LoadImage(GetModuleHandle(nullptr),L"g:\\Ћабы\\5 сем\\OSiSP\\WimApppp\\him.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+		SetTimer(hwnd,1,100,nullptr);
 	}
 	return 0;
 
 	case WM_PAINT:
 	{
 		PAINTSTRUCT     ps;
-		HDC             hdc = BeginPaint(hwnd, &ps);;
+		HDC             hdc = BeginPaint(hwnd, &ps);
 		RECT rect;
-		//BITMAP          bitmap;
-		//HDC             hdcMem;
-	//	HGDIOBJ         oldBitmap;
-	//	GetClientRect(hwnd,&rect);
-		
 		
 		rect.left = pos.w;
 		rect.right = pos.x + 100;
 		rect.top = pos.y;
 		rect.bottom = pos.z + 100;
-	//	rect.top = pos.z + 100;
-	//	rect.bottom = pos.y;
+		
 		FillRect(hdc, &rect, reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));
-		//hdc = BeginPaint(hwnd, &ps);
-	//	rect.left = pos.w;
-	//	rect.right = pos.x + 100;
-	//	rect.top = pos.y;
-	//	rect.bottom = pos.z + 100;
-	//	FillRect(hdc, &rect, (HBRUSH)(COLOR_WINDOW + 1));
-		//hdcMem = CreateCompatibleDC(hdc);
-		//oldBitmap = SelectObject(hdcMem, hBitmap);
-
-		//GetObject(hBitmap, sizeof(bitmap), &bitmap);
-
-	//	BitBlt(hdc, pos.x, pos.y, bitmap.bmWidth, bitmap.bmHeight, hdcMem, 0, 0, SRCCOPY);
-
-		//SelectObject(hdcMem, oldBitmap);
-		//DeleteDC(hdcMem);
 
 		EndPaint(hwnd, &ps);
 	}
@@ -149,7 +116,23 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			vSpeedx++;
 			pos.x = pos.x + (vSpeedx * 2);
 			pos.w = pos.w + (vSpeedx * 2);
-			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
+
+			GetClientRect(hwnd, &clientRect);
+			if (pos.x+100 >= clientRect.right)
+			{
+				for (i = 0;i < 15;i++)
+				{
+					//Sleep(10);
+					pos.x--;
+					pos.w--;
+					vSpeedw++;
+					//vSpeedx--;
+					pos.x = pos.x - (vSpeedw * 2);
+					pos.w = pos.w - (vSpeedw * 2);
+					RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
+				}
+			}
+			 RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
 			return 0;
 		case VK_LEFT:
 			pos.x--;
@@ -182,10 +165,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	case WM_MOUSEMOVE:
 	{
 		if (isDown)
-			//	if (GetCapture())
 		{
-			//ScreenToClient(hwnd, &p);
 			GetCursorPos(&p);
+
 			pos.w = pos.x;
 			pos.z = pos.y;
 			pos.x = p.x-50;
@@ -198,16 +180,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	case WM_LBUTTONDOWN:
 	{
-		//GetCursorPos(&p);
 		ScreenToClient(hwnd, &p);
-		//if (p.x >= pos.x && p.x <= pos.x + 200)// hBitmap.width)
 		if (p.x <= pos.x+80 && p.x >= pos.x - 200)
 		{
-			//check if the cursor is within the image.y limits
-		//	if (p.y <= pos.y && p.y >= pos.y + 200)//g_carInfo.height)
-			if (p.y <= pos.y+80 && p.y >= pos.y - 200)//magic numbers try to change to image width and length
+			if (p.y <= pos.y+80 && p.y >= pos.y - 200)
 			{
-				//SetCapture(hwnd);
 				isDown = true;
 			}
 		}
@@ -217,7 +194,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	case WM_LBUTTONUP:
 	{
-		//ReleaseCapture();
 		isDown = false;
 	}
 	return 0;
@@ -225,7 +201,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	case WM_DESTROY:
 	{
-		//DeleteObject(hBitmap);
+		KillTimer(hwnd,1);
 		PostQuitMessage(EXIT_SUCCESS);
 	}
 	return 0;
@@ -268,8 +244,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR szCmdLine, int nCmdS
 
 	}
 
-	return static_cast<int>(msg.wParam);
-
+	return msg.wParam;
 }
 
 
