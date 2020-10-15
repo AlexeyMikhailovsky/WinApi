@@ -2,45 +2,64 @@
 #include <winuser.h>
 #include <wingdi.h>
 
-
-boolean isDown,vkShift;
+boolean isDown, vkShift, vkUpX, vkUpY, moveX, moveY;
 POINT p;
 RECT clientRect;
-struct
-{
-	int x, y;
-	int z, w;
-} pos = { 0 };
+/*
+			vertical.x
 
-int vSpeedx = 0;
-int vSpeedy = 0;
-int vSpeedz = 0;
-int vSpeedw = 0;
+horizont.y				horizont.x
+
+			vertical.y
+*/
+POINT horizont = {0,0};
+POINT vertical = {0,0};
+
+int vSpeedHor = 0;
+int vSpeedVer = 0;
+
+int rSpeed = 0;
 int maxSpeed = 50;
 int i;
+
+HBITMAP hBitmap = NULL;
+HINSTANCE		hInst;
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
+
 	case WM_CREATE:
 	{
-		SetTimer(hwnd,1,100,nullptr);
+		hBitmap = (HBITMAP)LoadImage(hInst, L"G:\\Ћабы\\5 сем\\OSiSP\\WimApppp\\him.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+		return 0;
 	}
-	return 0;
 
 	case WM_PAINT:
 	{
 		PAINTSTRUCT     ps;
 		HDC             hdc = BeginPaint(hwnd, &ps);
-		RECT rect;
+		HDC				hdcMem;
+		RECT			rect;
+		BITMAP			bitmap;
+		HGDIOBJ			oldBitmap;
 		
-		rect.left = pos.w;
-		rect.right = pos.x + 100;
-		rect.top = pos.y;
-		rect.bottom = pos.z + 100;
+		hdcMem = CreateCompatibleDC(hdc);
+		oldBitmap = SelectObject(hdcMem, hBitmap);
+
+		GetObject(hBitmap, sizeof(bitmap), &bitmap);
+		BitBlt(hdc, horizont.y, vertical.x, bitmap.bmWidth, bitmap.bmHeight, hdcMem, 0, 0, SRCCOPY);
+
+		SelectObject(hdcMem, oldBitmap);
+		DeleteDC(hdcMem);
+
+		/*rect.left = horizont.y;
+		rect.right = horizont.y + 100;
+		rect.top = vertical.x;
+		rect.bottom = vertical.y + 100;
 		
-		FillRect(hdc, &rect, reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));
+		FillRect(hdc, &rect, reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));*/
 
 		EndPaint(hwnd, &ps);
 	}
@@ -54,24 +73,24 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			if (zDelta < 0)
 			{
-				pos.x++;
-				pos.w++;
+				horizont.x++;
+				horizont.y++;
 			}
 			else
 			{
-				pos.x--;
-				pos.w--;
+				horizont.x--;
+				horizont.y--;
 			}
 		}
 		else if (zDelta< 0)
 		{
-			pos.y++;
-			pos.z++;
+			vertical.y++;
+			vertical.x++;
 		}
 		else
 		{
-			pos.y--;
-			pos.z--;
+			vertical.y--;
+			vertical.x--;
 		}
 	RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
 	}
@@ -82,21 +101,50 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 		case VK_SHIFT:
 			vkShift = false;
+			vkUpX = true;
 			return 0;
 		case VK_RIGHT:
-			vSpeedx = 0;
+			vSpeedHor = 0;
+			vkUpX = true;
+			vkUpY = false;
+			GetClientRect(hwnd, &clientRect);
+			if (horizont.x  > clientRect.right - 100) {
+				horizont.x = clientRect.right - 100;
+				horizont.y = horizont.x ;
+			}
 			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
 			return 0;
 		case VK_LEFT:
-			vSpeedw = 0;
+			vSpeedHor = 0;
+			vkUpX = true;
+			vkUpY = false;
+			GetClientRect(hwnd, &clientRect);
+			if (horizont.y < clientRect.left) {
+				horizont.y = clientRect.left;
+				horizont.x = horizont.y ;
+			}
 			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
 			return 0;
 		case VK_UP:
-			vSpeedz = 0;
+			vSpeedVer = 0;
+			vkUpX = false;
+			vkUpY = true;
+			GetClientRect(hwnd, &clientRect);
+			if (vertical.x < clientRect.top) {
+				vertical.x = clientRect.top;
+				vertical.y = vertical.x ;
+			}
 			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
 			return 0;
 		case VK_DOWN:
-			vSpeedy = 0;
+			vSpeedVer = 0;
+			vkUpX = false;
+			vkUpY = true;
+			GetClientRect(hwnd, &clientRect);
+			if (vertical.y > clientRect.bottom - 100) {
+				vertical.y = clientRect.bottom - 100;
+				vertical.x = vertical.y ;
+			}
 			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
 			return 0;
 		}
@@ -109,54 +157,91 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 		case VK_SHIFT:
 			vkShift = true;
+			vkUpX = false;
 			return 0;
 		case VK_RIGHT:
-			pos.x++;
-			pos.w++;
-			vSpeedx++;
-			pos.x = pos.x + (vSpeedx * 2);
-			pos.w = pos.w + (vSpeedx * 2);
-
+			vkUpX = false;
+			horizont.x++;
+			horizont.y++;
+			vSpeedHor++;
+			rSpeed++;
+			horizont.x = horizont.x + (vSpeedHor * 2) +rSpeed;
+			horizont.y = horizont.y + (vSpeedHor * 2) +rSpeed;
 			GetClientRect(hwnd, &clientRect);
-			if (pos.x+100 >= clientRect.right)
+			if (horizont.x >= clientRect.right)
 			{
-				for (i = 0;i < 15;i++)
-				{
-					//Sleep(10);
-					pos.x--;
-					pos.w--;
-					vSpeedw++;
-					//vSpeedx--;
-					pos.x = pos.x - (vSpeedw * 2);
-					pos.w = pos.w - (vSpeedw * 2);
-					RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
-				}
+				vSpeedHor = vSpeedHor * (-1);
+				horizont.x = clientRect.right;
+				horizont.y = horizont.x;
+				horizont.x = horizont.x + (vSpeedHor * 2);
+				horizont.y = horizont.y + (vSpeedHor * 2);
+				RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
+				
 			}
 			 RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
 			return 0;
 		case VK_LEFT:
-			pos.x--;
-			pos.w--;
-			vSpeedw++;
-			pos.x = pos.x - (vSpeedw * 2);
-			pos.w = pos.w - (vSpeedw * 2);
+			vkUpX = false;
+			horizont.x--;
+			horizont.y--;
+			vSpeedHor--;
+			rSpeed--;
+			horizont.x = horizont.x + (vSpeedHor * 2) + rSpeed;
+			horizont.y = horizont.y + (vSpeedHor * 2) + rSpeed;
+			GetClientRect(hwnd, &clientRect);
+			if (horizont.y <= clientRect.left)
+			{
+				vSpeedHor = vSpeedHor * (-1);
+				horizont.y = clientRect.left;
+				horizont.x = horizont.y;
+				horizont.x = horizont.x + (vSpeedHor * 2);
+				horizont.y = horizont.y + (vSpeedHor * 2);
+				RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
+
+			}
 			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
 			return 0;
 		case VK_UP:
-			pos.y--;
-			pos.z--;
-			vSpeedz++;
-			pos.y = pos.y - (vSpeedz * 2);
-			pos.z = pos.z - (vSpeedz * 2);
+			vkUpY = false;
+			vertical.y--;
+			vertical.x--;
+			vSpeedVer--;
+			rSpeed--;
+			vertical.x = vertical.x + (vSpeedVer * 2) + rSpeed;
+			vertical.y = vertical.y + (vSpeedVer * 2) + rSpeed;
+			GetClientRect(hwnd, &clientRect);
+			if (vertical.x <= clientRect.top)
+			{
+				vSpeedVer = vSpeedVer * (-1);
+				vertical.x = clientRect.top;
+				vertical.y = vertical.x;
+				vertical.x = vertical.x + (vSpeedVer * 2);
+				vertical.y = vertical.y + (vSpeedVer * 2);
+				RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
+
+			}
 			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
 			return 0;
 		case VK_DOWN:
-			pos.y++;
-			pos.z++;
-			vSpeedy++;
-			pos.y = pos.y + (vSpeedy * 2);
-			pos.z = pos.z + (vSpeedy * 2);
-			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
+			vkUpY = false;
+			vertical.y++;
+			vertical.x++;
+			vSpeedVer++;
+			rSpeed++;
+			vertical.x = vertical.x + (vSpeedVer * 2) + rSpeed;
+			vertical.y = vertical.y + (vSpeedVer * 2) + rSpeed;
+			GetClientRect(hwnd, &clientRect);
+			if (vertical.y >= clientRect.bottom)
+			{
+				vSpeedVer = vSpeedVer * (-1);
+				vertical.y = clientRect.bottom;
+				vertical.x = vertical.y;
+				vertical.x = vertical.x + (vSpeedVer * 2);
+				vertical.y = vertical.y + (vSpeedVer * 2);
+				RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
+
+			}
+			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);//change to invalidate rect&&&&
 			return 0;
 		}
 	}
@@ -168,10 +253,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			GetCursorPos(&p);
 
-			pos.w = pos.x;
-			pos.z = pos.y;
-			pos.x = p.x-50;
-			pos.y = p.y-75;
+			horizont.y = horizont.x;
+			vertical.x = vertical.y;
+			horizont.x = p.x-50;
+			vertical.y = p.y-75;
 		
 			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
 		}
@@ -179,11 +264,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return 0;
 
 	case WM_LBUTTONDOWN:
-	{
+	{									
 		ScreenToClient(hwnd, &p);
-		if (p.x <= pos.x+80 && p.x >= pos.x - 200)
+		if (p.x <= horizont.x+80 && p.x >= horizont.x - 200)
 		{
-			if (p.y <= pos.y+80 && p.y >= pos.y - 200)
+			if (p.y <= vertical.y+80 && p.y >= vertical.y - 200)
 			{
 				isDown = true;
 			}
@@ -197,11 +282,57 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		isDown = false;
 	}
 	return 0;
+	case WM_TIMER:
+	{
+		switch (wParam)
+		{
+		case 1:
+			if ((rSpeed > 0) && vkUpX)	
+			{
+				rSpeed--;
+				horizont.x = horizont.x + rSpeed;
+				horizont.y = horizont.y + rSpeed;
+				
+				if (horizont.x + 100 >= clientRect.right)
+					rSpeed = rSpeed * (-1);
+				RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
+			}
+			if ((rSpeed < 0) && vkUpX)
+			{
+				rSpeed++;
+				horizont.x = horizont.x + rSpeed;
+				horizont.y = horizont.y + rSpeed;
+				if (horizont.y <= clientRect.left)
+					rSpeed = rSpeed * (-1);
+				RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
+			}
+			if ((rSpeed > 0) && vkUpY)
+			{
+				rSpeed--;
+				vertical.x = vertical.x + rSpeed;
+				vertical.y = vertical.y + rSpeed;
 
+				if (vertical.y + 100 >= clientRect.bottom)
+					rSpeed = rSpeed * (-1);
+				RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
+			}
+			if ((rSpeed < 0) && vkUpY)
+			{
+				rSpeed++;
+				vertical.x = vertical.x + rSpeed;
+				vertical.y = vertical.y + rSpeed;
+				if (vertical.x <= clientRect.top)
+					rSpeed = rSpeed * (-1);
+				RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);
+			}
+			return 0;
+		}
+	}
 
 	case WM_DESTROY:
 	{
 		KillTimer(hwnd,1);
+		DeleteObject(hBitmap);
 		PostQuitMessage(EXIT_SUCCESS);
 	}
 	return 0;
@@ -230,9 +361,11 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR szCmdLine, int nCmdS
 	if (!RegisterClassEx(&wc))
 		return EXIT_FAILURE;
 
-	hwnd = CreateWindow(wc.lpszClassName, L"YuriEnt.", WS_OVERLAPPEDWINDOW, 0, 0, 600, 600, nullptr, nullptr, wc.hInstance, nullptr);
+	hwnd = CreateWindow(wc.lpszClassName, L"YuriEnt.", WS_OVERLAPPEDWINDOW, 0, 0, 1500, 800, nullptr, nullptr, wc.hInstance, nullptr);
 	if (hwnd == INVALID_HANDLE_VALUE)
 		return EXIT_FAILURE;
+
+	SetTimer(hwnd,1,50,NULL);
 
 	ShowWindow(hwnd, nCmdShow);
 	UpdateWindow(hwnd);
